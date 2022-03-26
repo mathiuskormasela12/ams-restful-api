@@ -5,7 +5,7 @@ import { parse } from 'url';
 import { appConfig } from '../config';
 
 export function response(
-	url,
+	url: string,
 	status: any,
 	success: boolean,
 	message: string,
@@ -13,13 +13,12 @@ export function response(
 	totalData?: number,
 	totalPages?: number,
 ) {
-	const {
-		pathname,
-		query: { page = 1, ...query },
-	} = parse(url, true);
-	const queries = { page, ...query };
-
 	if (results && totalData && totalPages) {
+		const {
+			pathname,
+			query: { page = 1, ...query },
+		} = parse(url, true);
+		const queries = { page, ...query };
 		throw new HttpException(
 			{
 				status,
