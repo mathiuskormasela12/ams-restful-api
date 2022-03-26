@@ -1,13 +1,13 @@
 // ========== Auth Pipe
 import {
 	ArgumentMetadata,
+	HttpException,
 	HttpStatus,
 	Injectable,
 	PipeTransform,
 } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
 import { validate } from 'class-validator';
-import { response } from '../helpers';
 
 @Injectable()
 export class ValidationPipe implements PipeTransform {
@@ -21,7 +21,14 @@ export class ValidationPipe implements PipeTransform {
 
 		if (errors.length > 0) {
 			const [message] = Object.values(errors[0].constraints);
-			response(null, HttpStatus.BAD_REQUEST, false, message);
+			throw new HttpException(
+				{
+					status: HttpStatus.BAD_REQUEST,
+					success: false,
+					message,
+				},
+				HttpStatus.BAD_REQUEST,
+			);
 		}
 
 		return value;
