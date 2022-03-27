@@ -8,7 +8,6 @@ import { RegisterDto } from './dto';
 @Controller('api/v1')
 export class AuthController {
 	constructor(private authService: AuthService) {}
-
 	@Post('auth/register')
 	public register(
 		@Request() req: Request,

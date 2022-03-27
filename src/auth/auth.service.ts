@@ -1,16 +1,10 @@
 // ========== Auth Service
 // import all modules
-import {
-	HttpStatus,
-	Injectable,
-	Request,
-	Body,
-	HttpCode,
-} from '@nestjs/common';
+import { HttpStatus, Injectable, Request, Body } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as argon from 'argon2';
-import { response } from '../helpers';
+import { response, errorResponse } from '../helpers';
 import { ValidationPipe } from './auth.pipe';
 import { RegisterDto } from './dto';
 import { ConfigService } from '@nestjs/config';
@@ -28,11 +22,8 @@ export class AuthService {
 		@Body(new ValidationPipe()) body: RegisterDto,
 	): Promise<any> {
 		if (body.password !== body.passwordConfirmation) {
-			HttpCode(HttpStatus.BAD_REQUEST);
-			return response(
-				req.url,
+			throw errorResponse(
 				HttpStatus.BAD_REQUEST,
-				false,
 				"The password and the confirmation password don't match",
 			);
 		}
@@ -45,8 +36,7 @@ export class AuthService {
 			});
 
 			if (isExists) {
-				HttpCode(HttpStatus.BAD_REQUEST);
-				return response(
+				throw response(
 					req.url,
 					HttpStatus.BAD_REQUEST,
 					true,
@@ -69,7 +59,6 @@ export class AuthService {
 						delete results.password;
 						delete results.type;
 
-						HttpCode(HttpStatus.CREATED);
 						return response(
 							req.url,
 							HttpStatus.CREATED,
@@ -78,32 +67,14 @@ export class AuthService {
 							results,
 						);
 					} catch (err) {
-						HttpCode(HttpStatus.INTERNAL_SERVER_ERROR);
-						return response(
-							req.url,
-							HttpStatus.INTERNAL_SERVER_ERROR,
-							false,
-							err.message,
-						);
+						throw errorResponse(err.status, err.message);
 					}
 				} catch (err) {
-					HttpCode(HttpStatus.INTERNAL_SERVER_ERROR);
-					return response(
-						req.url,
-						HttpStatus.INTERNAL_SERVER_ERROR,
-						false,
-						err.message,
-					);
+					throw errorResponse(err.status, err.message);
 				}
 			}
 		} catch (err) {
-			HttpCode(HttpStatus.INTERNAL_SERVER_ERROR);
-			return response(
-				req.url,
-				HttpStatus.INTERNAL_SERVER_ERROR,
-				false,
-				err.message,
-			);
+			throw errorResponse(err.status, err.message);
 		}
 	}
 }
