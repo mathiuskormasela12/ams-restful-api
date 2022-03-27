@@ -17,7 +17,7 @@ export class AuthGuard implements CanActivate {
 	public async canActivate(context: ExecutionContext): Promise<boolean> {
 		const request = context.switchToHttp().getRequest();
 
-		const token = request.headers.authorization;
+		const token = request.headers['x-access-token'];
 		const secret = this.config.get('JWT_ACCESS_TOKEN_KEY');
 
 		if (token) {
