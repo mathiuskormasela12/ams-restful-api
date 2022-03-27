@@ -1,6 +1,6 @@
 // ========== Auth Controller
 // import all modules
-import { Body, Controller, Post, Request } from '@nestjs/common';
+import { Body, Controller, Post, Request, Headers } from '@nestjs/common';
 import { ValidationPipe } from './auth.pipe';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto';
@@ -22,5 +22,13 @@ export class AuthController {
 		@Body(new ValidationPipe()) body: LoginDto,
 	) {
 		return this.authService.login(req, body);
+	}
+
+	@Post('auth/access-token')
+	public createAccessToken(
+		@Request() req: Request,
+		@Headers() headers: Headers,
+	) {
+		return this.authService.createAccessToken(req, headers);
 	}
 }

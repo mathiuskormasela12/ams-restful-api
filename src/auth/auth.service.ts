@@ -1,6 +1,6 @@
 // ========== Auth Service
 // import all modules
-import { HttpStatus, Injectable, Request, Body } from '@nestjs/common';
+import { HttpStatus, Injectable, Request, Body, Headers } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as argon from 'argon2';
@@ -22,12 +22,11 @@ export class AuthService {
 		@Body(new ValidationPipe()) body: RegisterDto,
 	): Promise<any> {
 		if (body.password !== body.passwordConfirmation) {
-			throw responseGenerator(
-				req.url,
-				HttpStatus.BAD_REQUEST,
-				false,
-				"The password and the confirmation password don't match",
-			);
+			throw response({
+				status: HttpStatus.BAD_REQUEST,
+				success: false,
+				message: "The password and the confirmation password don't match",
+			});
 		}
 
 		try {
@@ -61,22 +60,48 @@ export class AuthService {
 						delete results.password;
 						delete results.type;
 
-						return responseGenerator(
+						throw responseGenerator(
 							req.url,
-							HttpStatus.CREATED,
+							HttpStatus.OK,
 							true,
 							'Registration successfully',
 							results,
 						);
 					} catch (responses) {
-						throw response(responses);
+						if (responses instanceof Error) {
+							throw responseGenerator(
+								req.url,
+								HttpStatus.BAD_REQUEST,
+								false,
+								responses.message,
+							);
+						} else {
+							throw responses;
+						}
 					}
 				} catch (responses) {
-					throw response(responses);
+					if (responses instanceof Error) {
+						throw responseGenerator(
+							req.url,
+							HttpStatus.BAD_REQUEST,
+							false,
+							responses.message,
+						);
+					} else {
+						throw responses;
+					}
 				}
 			}
 		} catch (responses) {
-			throw response(responses);
+			if (responses instanceof Error) {
+				throw response({
+					status: HttpStatus.BAD_REQUEST,
+					success: false,
+					message: responses.message,
+				});
+			} else {
+				throw response(responses);
+			}
 		}
 	}
 
@@ -105,25 +130,154 @@ export class AuthService {
 			const refreshTokenSecretKey = this.config.get('JWT_REFRESH_TOKEN_KEY');
 			const accessToken = this.jwt.sign(
 				{ id: isExists.id },
-				{ expiresIn: '2m', secret: accessTokenSecretKey },
+				{ expiresIn: '1m', secret: accessTokenSecretKey },
 			);
 			const refreshToken = this.jwt.sign(
 				{ id: isExists.id },
 				{ expiresIn: '5m', secret: refreshTokenSecretKey },
 			);
 
-			throw responseGenerator(
-				req.url,
-				HttpStatus.OK,
-				true,
-				'Login Successfully',
-				{
-					accessToken,
-					refreshToken,
-				},
-			);
+			try {
+				await this.prisma.authorizationToken.create({
+					data: {
+						refreshToken,
+					},
+				});
+
+				throw responseGenerator(
+					req.url,
+					HttpStatus.OK,
+					true,
+					'Login Successfully',
+					{
+						accessToken,
+						refreshToken,
+					},
+				);
+			} catch (responses) {
+				if (responses instanceof Error) {
+					throw responseGenerator(
+						req.url,
+						HttpStatus.BAD_REQUEST,
+						false,
+						responses.message,
+					);
+				} else {
+					throw responses;
+				}
+			}
 		} catch (responses) {
-			throw response(responses);
+			if (responses instanceof Error) {
+				throw response({
+					status: HttpStatus.BAD_REQUEST,
+					success: false,
+					message: responses.message,
+				});
+			} else {
+				throw response(responses);
+			}
+		}
+	}
+
+	public async createAccessToken(
+		@Request() req: Request,
+		@Headers() headers: Headers,
+	) {
+		const refreshToken = headers['x-refresh-token'];
+
+		if (!refreshToken) {
+			throw response({
+				status: HttpStatus.FORBIDDEN,
+				success: false,
+				message: 'Forbidden',
+			});
+		}
+
+		try {
+			const isRefreshTokenExists =
+				await this.prisma.authorizationToken.findFirst({
+					where: {
+						refreshToken,
+					},
+				});
+
+			if (!isRefreshTokenExists) {
+				throw responseGenerator(
+					req.url,
+					HttpStatus.NOT_FOUND,
+					false,
+					'The refresh token is not exists',
+				);
+			}
+
+			const refreshTokenSecretKey = this.config.get('JWT_REFRESH_TOKEN_KEY');
+
+			try {
+				const decode = await this.jwt.verify(refreshToken, {
+					secret: refreshTokenSecretKey,
+				});
+
+				const accessTokenSecretKey = this.config.get('JWT_ACCESS_TOKEN_KEY');
+
+				const accessToken = this.jwt.sign(
+					{ id: decode.id },
+					{ secret: accessTokenSecretKey, expiresIn: '1m' },
+				);
+				const newRefreshToken = this.jwt.sign(
+					{ id: decode.id },
+					{ secret: refreshTokenSecretKey, expiresIn: '5m' },
+				);
+
+				throw responseGenerator(
+					req.url,
+					HttpStatus.CREATED,
+					true,
+					'The access token is created successfully',
+					{ accessToken, refreshToken: newRefreshToken },
+				);
+			} catch (responses) {
+				if (responses instanceof Error) {
+					if (responses.message === 'jwt expired') {
+						try {
+							await this.prisma.authorizationToken.delete({
+								where: { id: isRefreshTokenExists.id },
+							});
+							throw responseGenerator(
+								req.url,
+								HttpStatus.BAD_REQUEST,
+								false,
+								responses.message,
+							);
+						} catch (err) {
+							throw responseGenerator(
+								req.url,
+								HttpStatus.BAD_REQUEST,
+								false,
+								err.message,
+							);
+						}
+					} else {
+						throw responseGenerator(
+							req.url,
+							HttpStatus.BAD_REQUEST,
+							false,
+							responses.message,
+						);
+					}
+				} else {
+					throw responses;
+				}
+			}
+		} catch (responses) {
+			if (responses instanceof Error) {
+				throw response({
+					status: HttpStatus.BAD_REQUEST,
+					success: false,
+					message: responses.message,
+				});
+			} else {
+				throw response(responses);
+			}
 		}
 	}
 }

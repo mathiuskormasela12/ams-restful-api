@@ -22,7 +22,7 @@ export class AuthGuard implements CanActivate {
 
 		if (token) {
 			try {
-				const decode = this.jwt.verify(token, { secret });
+				const decode = await this.jwt.verify(token, { secret });
 				request.app.locals.decode = decode;
 				return true;
 			} catch (err) {

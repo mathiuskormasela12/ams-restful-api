@@ -45,7 +45,7 @@ model Student {
 
 model AuthorizationToken {
 	id Int @id @default(autoincrement())
-	refreshToken String
+	refreshToken String @db.VarChar(255)
 
 	@@map("authorizationToken")
 }
