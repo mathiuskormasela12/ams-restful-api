@@ -42,3 +42,10 @@ model Student {
 
 	@@map("students")
 }
+
+model AuthorizationToken {
+	id Int @id @default(autoincrement())
+	refreshToken String
+
+	@@map("authorizationToken")
+}

@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
 import { validate } from 'class-validator';
-import { errorResponse } from '../helpers';
+import { response } from '../helpers';
 
 @Injectable()
 export class ValidationPipe implements PipeTransform {
@@ -21,7 +21,11 @@ export class ValidationPipe implements PipeTransform {
 
 		if (errors.length > 0) {
 			const [message] = Object.values(errors[0].constraints);
-			throw errorResponse(HttpStatus.BAD_REQUEST, message);
+			throw response({
+				status: HttpStatus.BAD_REQUEST,
+				success: false,
+				message,
+			});
 		}
 
 		return value;

@@ -3,7 +3,7 @@
 import { Body, Controller, Post, Request } from '@nestjs/common';
 import { ValidationPipe } from './auth.pipe';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dto';
+import { LoginDto, RegisterDto } from './dto';
 
 @Controller('api/v1')
 export class AuthController {
@@ -14,5 +14,13 @@ export class AuthController {
 		@Body(new ValidationPipe()) body: RegisterDto,
 	) {
 		return this.authService.register(req, body);
+	}
+
+	@Post('auth/login')
+	public login(
+		@Request() req: Request,
+		@Body(new ValidationPipe()) body: LoginDto,
+	) {
+		return this.authService.login(req, body);
 	}
 }

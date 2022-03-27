@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { errorResponse } from '../helpers';
+import { response } from '../helpers';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -26,10 +26,18 @@ export class AuthGuard implements CanActivate {
 				request.app.locals.decode = decode;
 				return true;
 			} catch (err) {
-				throw errorResponse(HttpStatus.BAD_REQUEST, err.message);
+				throw response({
+					status: HttpStatus.BAD_REQUEST,
+					success: false,
+					message: err.message,
+				});
 			}
 		} else {
-			throw errorResponse(HttpStatus.BAD_REQUEST, 'Forbidden');
+			throw response({
+				status: HttpStatus.BAD_REQUEST,
+				success: false,
+				message: 'Forbidden',
+			});
 		}
 	}
 }
